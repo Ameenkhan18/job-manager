@@ -1,3 +1,358 @@
+import { useState, useEffect } from "react";
+
+const STATUS_CONFIG = {
+  Applied:   { color: "#22D3EE", glow: "rgba(34,211,238,0.15)",   bg: "rgba(34,211,238,0.08)",   border: "rgba(34,211,238,0.3)" },
+  Pending:   { color: "#F97316", glow: "rgba(249,115,22,0.15)",   bg: "rgba(249,115,22,0.08)",   border: "rgba(249,115,22,0.3)" },
+  Interview: { color: "#A78BFA", glow: "rgba(167,139,250,0.15)",  bg: "rgba(167,139,250,0.08)",  border: "rgba(167,139,250,0.3)" },
+  Rejected:  { color: "#F87171", glow: "rgba(248,113,113,0.15)",  bg: "rgba(248,113,113,0.08)",  border: "rgba(248,113,113,0.3)" },
+  Offered:   { color: "#4ADE80", glow: "rgba(74,222,128,0.15)",   bg: "rgba(74,222,128,0.08)",   border: "rgba(74,222,128,0.3)" },
+  Saved:     { color: "#FBBF24", glow: "rgba(251,191,36,0.15)",   bg: "rgba(251,191,36,0.08)",   border: "rgba(251,191,36,0.3)" },
+};
+
+const ROLES = [
+  "Software Engineer","Frontend Engineer","Backend Engineer","Full Stack",
+  "Data Scientist","ML Engineer","Product Manager","Designer","DevOps",
+  "QA Engineer","Other",
+];
+
+const EMPTY_FORM = {
+  company: "", role: "", jobLink: "", resumeLink: "", status: "Pending",
+  dateApplied: new Date().toISOString().slice(0, 10), notes: "",
+};
+
+const STORAGE_KEY = "job_tracker_applications";
+
+function StatusBadge({ status }) {
+  const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.Pending;
+  return (
+    <span style={{
+      background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}`,
+      borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 600,
+      letterSpacing: 0.5, whiteSpace: "nowrap", fontFamily: "'JetBrains Mono', monospace",
+    }}>{status}</span>
+  );
+}
+
+function Modal({ open, onClose, children }) {
+  if (!open) return null;
+  return (
+    <div style={{
+      position: "absolute", inset: 0, background: "rgba(0,0,0,0.7)",
+      display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 16,
+    }} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{
+        background: "#0d0d1a", borderRadius: 14, border: "1px solid #1a1a2e",
+        padding: "1.5rem", width: "100%", maxWidth: 540, maxHeight: "90vh", overflowY: "auto",
+      }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function FormField({ label, children }) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <label style={{ display: "block", fontSize: 10, color: "#555", marginBottom: 5, fontWeight: 600, letterSpacing: 2, textTransform: "uppercase", fontFamily: "'JetBrains Mono', monospace" }}>{label}</label>
+      {children}
+    </div>
+  );
+}
+
+export default function JobTracker() {
+  const [apps, setApps] = useState([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editId, setEditId] = useState(null);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [filterStatus, setFilterStatus] = useState("All");
+  const [filterRole, setFilterRole] = useState("All");
+  const [search, setSearch] = useState("");
+  const [sortKey, setSortKey] = useState("dateApplied");
+  const [sortDir, setSortDir] = useState("desc");
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [notesModal, setNotesModal] = useState(null);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) setApps(JSON.parse(saved));
+    } catch {}
+  }, []);
+
+  const save = (data) => {
+    setApps(data);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
+  };
+
+  const openAdd = () => { setForm(EMPTY_FORM); setEditId(null); setModalOpen(true); };
+  const openEdit = (app) => { setForm({ ...app }); setEditId(app.id); setModalOpen(true); };
+
+  const handleSubmit = () => {
+    if (!form.company.trim() || !form.role.trim()) return;
+    if (editId) {
+      save(apps.map(a => a.id === editId ? { ...form, id: editId } : a));
+    } else {
+      save([...apps, { ...form, id: Date.now() }]);
+    }
+    setModalOpen(false);
+  };
+
+  const handleDelete = (id) => { save(apps.filter(a => a.id !== id)); setDeleteConfirm(null); };
+  const handleStatusChange = (id, status) => save(apps.map(a => a.id === id ? { ...a, status } : a));
+  const updateForm = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const filtered = apps
+    .filter(a => filterStatus === "All" || a.status === filterStatus)
+    .filter(a => filterRole === "All" || a.role === filterRole)
+    .filter(a => !search || a.company.toLowerCase().includes(search.toLowerCase()) || a.role.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => {
+      let va = a[sortKey] || "", vb = b[sortKey] || "";
+      return sortDir === "asc" ? va.localeCompare(vb) : vb.localeCompare(va);
+    });
+
+  const stats = Object.keys(STATUS_CONFIG).map(s => ({ label: s, count: apps.filter(a => a.status === s).length }));
+  const allRoles = [...new Set(apps.map(a => a.role).filter(Boolean))];
+  const activeCount = apps.filter(a => a.status === "Applied" || a.status === "Interview").length;
+
+  const toggleSort = (key) => {
+    if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortKey(key); setSortDir("asc"); }
+  };
+
+  const SortIcon = ({ col }) => (
+    <span style={{ fontSize: 9, marginLeft: 4, opacity: sortKey === col ? 1 : 0.25 }}>
+      {sortKey === col ? (sortDir === "asc" ? "▲" : "▼") : "⇅"}
+    </span>
+  );
+
+  const inputStyle = {
+    width: "100%", padding: "9px 12px", borderRadius: 8, fontSize: 13,
+    border: "1px solid #1a1a2e", background: "#111122",
+    color: "#E2E8F0", boxSizing: "border-box",
+    fontFamily: "'JetBrains Mono', monospace",
+    outline: "none",
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#080810", color: "#E2E8F0", fontFamily: "'JetBrains Mono', monospace", position: "relative" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@300;400;600;700&display=swap');
+        * { box-sizing: border-box; }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: #0d0d1a; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+        .stat-card { transition: all 0.15s; cursor: pointer; }
+        .stat-card:hover { transform: translateY(-1px); }
+        .row-hover:hover { background: #0d0d1a !important; }
+        .action-btn { transition: all 0.15s; }
+        .action-btn:hover { filter: brightness(1.2); }
+        input:focus, select:focus, textarea:focus { border-color: #333 !important; box-shadow: 0 0 0 2px rgba(167,139,250,0.15); }
+      `}</style>
+
+      <div style={{ padding: "20px 16px", maxWidth: 1100, margin: "0 auto" }}>
+
+        {/* Header */}
+        <div style={{ background: "#0d0d1a", borderBottom: "1px solid #1a1a2e", padding: "20px 0 16px", marginBottom: 24 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
+            <div>
+              <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 30, letterSpacing: 4, color: "#fff", lineHeight: 1 }}>
+                JOB TRACKER
+              </div>
+              <div style={{ fontSize: 10, color: "#444", letterSpacing: 2, marginTop: 4 }}>
+                {apps.length} TOTAL · {activeCount} ACTIVE
+              </div>
+            </div>
+            <button onClick={openAdd} className="action-btn" style={{
+              background: "#A78BFA", color: "#000", border: "none", borderRadius: 8,
+              padding: "10px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer",
+              fontFamily: "'Bebas Neue', sans-serif", letterSpacing: 2, fontSize: 15,
+            }}>+ ADD APPLICATION</button>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(90px, 1fr))", gap: 8, marginBottom: 20 }}>
+          {stats.map(s => {
+            const cfg = STATUS_CONFIG[s.label];
+            const active = filterStatus === s.label;
+            return (
+              <div key={s.label} className="stat-card" onClick={() => setFilterStatus(active ? "All" : s.label)} style={{
+                background: active ? cfg.bg : "#0d0d1a",
+                border: `1px solid ${active ? cfg.border : "#1a1a2e"}`,
+                borderRadius: 10, padding: "12px 14px",
+                boxShadow: active ? `0 0 12px ${cfg.glow}` : "none",
+              }}>
+                <p style={{ margin: 0, fontSize: 9, color: active ? cfg.color : "#444", fontWeight: 600, letterSpacing: 2, textTransform: "uppercase" }}>{s.label}</p>
+                <p style={{ margin: "4px 0 0", fontSize: 24, fontWeight: 700, color: active ? cfg.color : "#ccc", fontFamily: "'Bebas Neue', sans-serif", lineHeight: 1 }}>{s.count}</p>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Filters */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+          <input placeholder="Search company or role…" value={search} onChange={e => setSearch(e.target.value)}
+            style={{ ...inputStyle, width: 220, flex: "1 1 160px" }} />
+          <select value={filterRole} onChange={e => setFilterRole(e.target.value)}
+            style={{ ...inputStyle, width: "auto", flex: "0 0 auto" }}>
+            <option value="All">All roles</option>
+            {allRoles.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+          {(filterStatus !== "All" || filterRole !== "All" || search) && (
+            <button onClick={() => { setFilterStatus("All"); setFilterRole("All"); setSearch(""); }} className="action-btn"
+              style={{ fontSize: 11, color: "#555", background: "none", border: "1px solid #1a1a2e", borderRadius: 8, padding: "6px 14px", cursor: "pointer", letterSpacing: 1 }}>
+              CLEAR FILTERS
+            </button>
+          )}
+        </div>
+
+        {/* Table */}
+        {apps.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "4rem 1rem", color: "#333" }}>
+            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 24, letterSpacing: 3, marginBottom: 8 }}>NO APPLICATIONS YET</div>
+            <div style={{ fontSize: 12, color: "#444" }}>Click "Add application" to get started</div>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "3rem 1rem", color: "#444", fontSize: 13 }}>
+            No applications match your filters
+          </div>
+        ) : (
+          <div style={{ overflowX: "auto", borderRadius: 10, border: "1px solid #1a1a2e" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, tableLayout: "fixed" }}>
+              <colgroup>
+                <col style={{ width: "16%" }} /><col style={{ width: "14%" }} /><col style={{ width: "12%" }} />
+                <col style={{ width: "10%" }} /><col style={{ width: "10%" }} /><col style={{ width: "10%" }} />
+                <col style={{ width: "8%" }} /><col style={{ width: "10%" }} /><col style={{ width: "10%" }} />
+              </colgroup>
+              <thead>
+                <tr style={{ background: "#0d0d1a", borderBottom: "1px solid #1a1a2e" }}>
+                  {[["company","COMPANY"],["role","ROLE"],["status","STATUS"],["dateApplied","DATE"]].map(([k, l]) => (
+                    <th key={k} onClick={() => toggleSort(k)} style={{
+                      padding: "10px 12px", textAlign: "left", fontWeight: 600, color: "#444",
+                      cursor: "pointer", userSelect: "none", fontSize: 9, letterSpacing: 2,
+                    }}>
+                      {l}<SortIcon col={k} />
+                    </th>
+                  ))}
+                  {["JOB LINK","RESUME","NOTES","STATUS","ACTIONS"].map(h => (
+                    <th key={h} style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, color: "#444", fontSize: 9, letterSpacing: 2 }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((app, i) => {
+                  const cfg = STATUS_CONFIG[app.status] || STATUS_CONFIG.Pending;
+                  return (
+                    <tr key={app.id} className="row-hover" style={{
+                      borderBottom: i < filtered.length - 1 ? "1px solid #111122" : "none",
+                      background: "#080810",
+                    }}>
+                      <td style={{ padding: "11px 12px", fontWeight: 600, color: "#E2E8F0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={app.company}>{app.company}</td>
+                      <td style={{ padding: "11px 12px", color: "#666", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={app.role}>{app.role}</td>
+                      <td style={{ padding: "11px 12px" }}><StatusBadge status={app.status} /></td>
+                      <td style={{ padding: "11px 12px", color: "#555" }}>{app.dateApplied || "—"}</td>
+                      <td style={{ padding: "11px 12px" }}>
+                        {app.jobLink
+                          ? <a href={app.jobLink} target="_blank" rel="noreferrer" style={{ color: "#22D3EE", textDecoration: "none", fontSize: 11 }}>View ↗</a>
+                          : <span style={{ color: "#333" }}>—</span>}
+                      </td>
+                      <td style={{ padding: "11px 12px" }}>
+                        {app.resumeLink
+                          ? <a href={app.resumeLink} target="_blank" rel="noreferrer" style={{ color: "#4ADE80", textDecoration: "none", fontSize: 11 }}>Open ↗</a>
+                          : <span style={{ color: "#333" }}>—</span>}
+                      </td>
+                      <td style={{ padding: "11px 12px" }}>
+                        {app.notes
+                          ? <button onClick={() => setNotesModal(app)} style={{ fontSize: 11, color: "#FBBF24", background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.25)", borderRadius: 6, padding: "3px 8px", cursor: "pointer" }}>View</button>
+                          : <span style={{ color: "#333" }}>—</span>}
+                      </td>
+                      <td style={{ padding: "8px 12px" }}>
+                        <select value={app.status} onChange={e => handleStatusChange(app.id, e.target.value)}
+                          style={{ fontSize: 11, border: `1px solid ${cfg.border}`, borderRadius: 6, padding: "4px 6px", background: cfg.bg, color: cfg.color, cursor: "pointer", width: "100%", fontFamily: "'JetBrains Mono', monospace" }}>
+                          {Object.keys(STATUS_CONFIG).map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      </td>
+                      <td style={{ padding: "8px 12px" }}>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button onClick={() => openEdit(app)} className="action-btn" style={{ fontSize: 11, background: "none", border: "1px solid #222", borderRadius: 6, padding: "4px 8px", cursor: "pointer", color: "#666" }}>Edit</button>
+                          <button onClick={() => setDeleteConfirm(app.id)} className="action-btn" style={{ fontSize: 11, background: "none", border: "1px solid rgba(248,113,113,0.3)", borderRadius: 6, padding: "4px 8px", cursor: "pointer", color: "#F87171" }}>Del</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Add/Edit Modal */}
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)}>
+        <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 18, letterSpacing: 3, color: "#fff", marginBottom: 18 }}>
+          {editId ? "EDIT APPLICATION" : "ADD APPLICATION"}
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 12px" }}>
+          <FormField label="Company *">
+            <input value={form.company} onChange={e => updateForm("company", e.target.value)} placeholder="e.g. Google" style={inputStyle} />
+          </FormField>
+          <FormField label="Role *">
+            <input value={form.role} onChange={e => updateForm("role", e.target.value)} placeholder="e.g. Software Engineer" style={inputStyle} list="roles-list" />
+            <datalist id="roles-list">{ROLES.map(r => <option key={r} value={r} />)}</datalist>
+          </FormField>
+          <FormField label="Status">
+            <select value={form.status} onChange={e => updateForm("status", e.target.value)} style={inputStyle}>
+              {Object.keys(STATUS_CONFIG).map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </FormField>
+          <FormField label="Date Applied">
+            <input type="date" value={form.dateApplied} onChange={e => updateForm("dateApplied", e.target.value)} style={inputStyle} />
+          </FormField>
+        </div>
+        <FormField label="Job Posting Link">
+          <input value={form.jobLink} onChange={e => updateForm("jobLink", e.target.value)} placeholder="https://..." style={inputStyle} />
+        </FormField>
+        <FormField label="Resume Link">
+          <input value={form.resumeLink} onChange={e => updateForm("resumeLink", e.target.value)} placeholder="https://drive.google.com/..." style={inputStyle} />
+        </FormField>
+        <FormField label="Notes">
+          <textarea value={form.notes} onChange={e => updateForm("notes", e.target.value)} placeholder="Recruiter contact, interview notes, referral…" rows={3} style={{ ...inputStyle, resize: "vertical" }} />
+        </FormField>
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 12 }}>
+          <button onClick={() => setModalOpen(false)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid #222", background: "none", cursor: "pointer", fontSize: 12, color: "#555", letterSpacing: 1 }}>CANCEL</button>
+          <button onClick={handleSubmit} disabled={!form.company.trim() || !form.role.trim()} className="action-btn"
+            style={{ padding: "8px 20px", borderRadius: 8, border: "none", background: "#A78BFA", color: "#000", cursor: "pointer", fontSize: 13, fontWeight: 700, opacity: (!form.company.trim() || !form.role.trim()) ? 0.35 : 1, fontFamily: "'Bebas Neue', sans-serif", letterSpacing: 2 }}>
+            {editId ? "SAVE CHANGES" : "ADD APPLICATION"}
+          </button>
+        </div>
+      </Modal>
+
+      {/* Notes Modal */}
+      <Modal open={!!notesModal} onClose={() => setNotesModal(null)}>
+        {notesModal && <>
+          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 20, letterSpacing: 3, color: "#FBBF24", marginBottom: 2 }}>{notesModal.company}</div>
+          <p style={{ margin: "0 0 1rem", fontSize: 11, color: "#555", letterSpacing: 1 }}>{notesModal.role}</p>
+          <p style={{ fontSize: 13, color: "#ccc", lineHeight: 1.8, whiteSpace: "pre-wrap" }}>{notesModal.notes}</p>
+          <div style={{ textAlign: "right", marginTop: 14 }}>
+            <button onClick={() => setNotesModal(null)} style={{ padding: "7px 16px", borderRadius: 8, border: "1px solid #222", background: "none", cursor: "pointer", fontSize: 12, color: "#555" }}>CLOSE</button>
+          </div>
+        </>}
+      </Modal>
+
+      {/* Delete Confirm */}
+      <Modal open={!!deleteConfirm} onClose={() => setDeleteConfirm(null)}>
+        <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 20, letterSpacing: 3, color: "#F87171", marginBottom: 8 }}>DELETE APPLICATION?</div>
+        <p style={{ fontSize: 13, color: "#555", margin: "0 0 1.25rem" }}>This can't be undone.</p>
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <button onClick={() => setDeleteConfirm(null)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid #222", background: "none", cursor: "pointer", fontSize: 12, color: "#555" }}>CANCEL</button>
+          <button onClick={() => handleDelete(deleteConfirm)} className="action-btn" style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: "#F87171", color: "#000", cursor: "pointer", fontSize: 13, fontWeight: 700, fontFamily: "'Bebas Neue', sans-serif", letterSpacing: 2 }}>DELETE</button>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+
 import { useState, useEffect } from 'react'
 import './App.css'
 
