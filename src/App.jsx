@@ -596,18 +596,14 @@ function App() {
     <>
       <JobTracker />
 
-      <div className="ticks"></div>
-
       <ResumesSection />
-
-      <div className="ticks"></div>
 
       <JobProfilesSection />
     </>
   )
 }
 
-export default App>
+export default App
 
       <style>{`
         #resumes, #job-profiles {
