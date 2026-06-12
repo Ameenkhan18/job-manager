@@ -59,7 +59,7 @@ function FormField({ label, children }) {
   );
 }
 
-export default function JobTracker() {
+function JobTracker() {
   const [apps, setApps] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editId, setEditId] = useState(null);
@@ -594,11 +594,20 @@ function JobProfilesSection() {
 function App() {
   return (
     <>
+      <JobTracker />
+
+      <div className="ticks"></div>
+
       <ResumesSection />
+
       <div className="ticks"></div>
+
       <JobProfilesSection />
-      <div className="ticks"></div>
-      <section id="spacer"></section>
+    </>
+  )
+}
+
+export default App>
 
       <style>{`
         #resumes, #job-profiles {
