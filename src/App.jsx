@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import './App.css'
 
 const STATUS_CONFIG = {
   Applied:   { color: "#22D3EE", glow: "rgba(34,211,238,0.15)",   bg: "rgba(34,211,238,0.08)",   border: "rgba(34,211,238,0.3)" },
@@ -353,8 +354,6 @@ function JobTracker() {
 }
 
 
-import { useState, useEffect } from 'react'
-import './App.css'
 
 // ── Default data ─────────────────────────────────────────────────────────────
 
@@ -599,12 +598,6 @@ function App() {
       <ResumesSection />
 
       <JobProfilesSection />
-    </>
-  )
-}
-
-export default App
-
       <style>{`
         #resumes, #job-profiles {
           max-width: 900px;
