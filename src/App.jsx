@@ -599,87 +599,122 @@ function App() {
 
       <JobProfilesSection />
       <style>{`
+        /* ── Shared section layout ─────────────────────────────── */
         #resumes, #job-profiles {
-          max-width: 900px;
+          max-width: 1100px;
           margin: 0 auto;
-          padding: 2.5rem 1.5rem;
+          padding: 2.5rem 1rem;
+          font-family: 'JetBrains Mono', monospace;
+          color: #E2E8F0;
+          background: #080810;
         }
         #resumes h2, #job-profiles h2 {
-          font-size: 1.6rem;
+          font-family: 'Bebas Neue', sans-serif;
+          font-size: 2rem;
+          letter-spacing: 4px;
+          color: #fff;
           margin-bottom: 0.25rem;
         }
         .section-sub {
-          font-size: 0.85rem;
-          opacity: 0.6;
+          font-size: 0.75rem;
+          color: #444;
+          letter-spacing: 1.5px;
           margin-bottom: 1.5rem;
+          text-transform: uppercase;
         }
+
+        /* ── Resume cards ──────────────────────────────────────── */
         .resume-list {
           display: flex;
           flex-direction: column;
-          gap: 0.7rem;
+          gap: 0.6rem;
           margin-bottom: 1.2rem;
         }
         .resume-card {
           display: flex;
           align-items: center;
           gap: 0.75rem;
-          background: rgba(255,255,255,0.05);
-          border: 1px solid rgba(255,255,255,0.1);
-          border-radius: 8px;
-          padding: 0.65rem 1rem;
+          background: #0d0d1a;
+          border: 1px solid #1a1a2e;
+          border-radius: 10px;
+          padding: 0.75rem 1rem;
           flex-wrap: wrap;
+          transition: border-color 0.15s;
         }
+        .resume-card:hover { border-color: rgba(167,139,250,0.4); }
         .resume-name {
           flex: 1;
           font-weight: 600;
+          font-size: 0.85rem;
           cursor: pointer;
           min-width: 120px;
-          padding: 2px 4px;
-          border-radius: 4px;
+          padding: 3px 6px;
+          border-radius: 6px;
+          color: #E2E8F0;
+          letter-spacing: 0.5px;
         }
-        .resume-name:hover { background: rgba(255,255,255,0.08); }
+        .resume-name:hover { background: rgba(167,139,250,0.08); }
         .resume-link-edit {
           flex: 2;
           cursor: pointer;
-          font-size: 0.85rem;
-          padding: 2px 4px;
-          border-radius: 4px;
+          font-size: 0.8rem;
+          padding: 3px 6px;
+          border-radius: 6px;
           min-width: 140px;
+          color: #555;
         }
-        .resume-link-edit:hover { background: rgba(255,255,255,0.08); }
+        .resume-link-edit:hover { background: rgba(167,139,250,0.08); }
+        .resume-link-edit a { color: #22D3EE; text-decoration: none; }
+        .resume-link-edit a:hover { text-decoration: underline; }
         .resume-input, .link-input {
           flex: 1;
-          background: rgba(255,255,255,0.08);
-          border: 1px solid rgba(255,255,255,0.25);
-          border-radius: 6px;
-          padding: 0.3rem 0.6rem;
-          color: inherit;
-          font-size: 0.9rem;
+          background: #111122;
+          border: 1px solid #1a1a2e;
+          border-radius: 8px;
+          padding: 0.35rem 0.7rem;
+          color: #E2E8F0;
+          font-size: 0.85rem;
+          font-family: 'JetBrains Mono', monospace;
           min-width: 160px;
+          outline: none;
+        }
+        .resume-input:focus, .link-input:focus {
+          border-color: #333;
+          box-shadow: 0 0 0 2px rgba(167,139,250,0.15);
         }
         .link-input { flex: 2; }
-        .placeholder { opacity: 0.4; font-style: italic; }
+        .placeholder { color: #333; font-style: italic; font-size: 0.8rem; }
         .remove-btn {
           background: none;
           border: none;
-          color: #ff6b6b;
+          color: #F87171;
           cursor: pointer;
-          font-size: 0.85rem;
+          font-size: 0.9rem;
           padding: 0 4px;
-          opacity: 0.6;
+          opacity: 0.5;
+          transition: opacity 0.15s;
         }
         .remove-btn:hover { opacity: 1; }
         .add-resume-btn {
-          background: rgba(255,255,255,0.07);
-          border: 1px dashed rgba(255,255,255,0.25);
-          border-radius: 8px;
-          color: inherit;
+          background: none;
+          border: 1px dashed #1a1a2e;
+          border-radius: 10px;
+          color: #444;
           cursor: pointer;
-          padding: 0.5rem 1.2rem;
-          font-size: 0.9rem;
-          transition: background 0.2s;
+          padding: 0.6rem 1.4rem;
+          font-size: 0.75rem;
+          font-family: 'JetBrains Mono', monospace;
+          letter-spacing: 2px;
+          text-transform: uppercase;
+          transition: all 0.15s;
         }
-        .add-resume-btn:hover { background: rgba(255,255,255,0.12); }
+        .add-resume-btn:hover {
+          border-color: rgba(167,139,250,0.4);
+          color: #A78BFA;
+          background: rgba(167,139,250,0.05);
+        }
+
+        /* ── Job profiles grid ─────────────────────────────────── */
         .profiles-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
@@ -689,52 +724,77 @@ function App() {
           .profiles-grid { grid-template-columns: 1fr; }
         }
         .profiles-table-wrap h3 {
+          font-family: 'Bebas Neue', sans-serif;
           font-size: 1rem;
-          margin-bottom: 0.6rem;
-          opacity: 0.8;
+          letter-spacing: 3px;
+          color: #A78BFA;
+          margin-bottom: 0.75rem;
+          text-transform: uppercase;
         }
         .profiles-table {
           width: 100%;
           border-collapse: collapse;
-          font-size: 0.85rem;
+          font-size: 0.8rem;
+          border: 1px solid #1a1a2e;
+          border-radius: 10px;
+          overflow: hidden;
         }
         .profiles-table th {
           text-align: left;
-          padding: 0.4rem 0.6rem;
-          border-bottom: 1px solid rgba(255,255,255,0.15);
-          opacity: 0.5;
-          font-weight: 500;
+          padding: 0.5rem 0.75rem;
+          background: #0d0d1a;
+          border-bottom: 1px solid #1a1a2e;
+          color: #444;
+          font-weight: 600;
+          font-size: 0.7rem;
+          letter-spacing: 2px;
+          text-transform: uppercase;
         }
         .profiles-table td {
-          padding: 0.45rem 0.6rem;
-          border-bottom: 1px solid rgba(255,255,255,0.06);
+          padding: 0.5rem 0.75rem;
+          border-bottom: 1px solid #111122;
           vertical-align: middle;
+          background: #080810;
         }
-        .profile-name { font-weight: 500; white-space: nowrap; }
+        .profiles-table tr:last-child td { border-bottom: none; }
+        .profiles-table tr:hover td { background: #0d0d1a; }
+        .profile-name { font-weight: 600; white-space: nowrap; color: #E2E8F0; }
         .profile-url-cell { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .profile-link { color: #61dafb; text-decoration: none; font-size: 0.8rem; }
+        .profile-link { color: #22D3EE; text-decoration: none; font-size: 0.78rem; }
         .profile-link:hover { text-decoration: underline; }
         .profile-input {
           width: 100%;
-          background: rgba(255,255,255,0.08);
-          border: 1px solid rgba(255,255,255,0.25);
+          background: #111122;
+          border: 1px solid #1a1a2e;
           border-radius: 6px;
-          padding: 0.25rem 0.5rem;
-          color: inherit;
-          font-size: 0.82rem;
+          padding: 0.3rem 0.6rem;
+          color: #E2E8F0;
+          font-size: 0.78rem;
+          font-family: 'JetBrains Mono', monospace;
+          outline: none;
+        }
+        .profile-input:focus {
+          border-color: #333;
+          box-shadow: 0 0 0 2px rgba(167,139,250,0.15);
         }
         .edit-btn {
           background: none;
-          border: 1px solid rgba(255,255,255,0.2);
-          border-radius: 4px;
-          color: inherit;
+          border: 1px solid #1a1a2e;
+          border-radius: 6px;
+          color: #555;
           cursor: pointer;
-          font-size: 0.75rem;
-          padding: 0.15rem 0.5rem;
-          opacity: 0.65;
+          font-size: 0.7rem;
+          font-family: 'JetBrains Mono', monospace;
+          padding: 0.2rem 0.6rem;
+          letter-spacing: 1px;
           white-space: nowrap;
+          transition: all 0.15s;
         }
-        .edit-btn:hover { opacity: 1; background: rgba(255,255,255,0.08); }
+        .edit-btn:hover {
+          border-color: rgba(167,139,250,0.4);
+          color: #A78BFA;
+          background: rgba(167,139,250,0.08);
+        }
       `}</style>
     </>
   )
