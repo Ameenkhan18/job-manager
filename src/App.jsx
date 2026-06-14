@@ -399,7 +399,20 @@ const DEFAULT_COMPANIES = [
 function load(key, fallback) {
   try {
     const raw = localStorage.getItem(key)
-    return raw ? JSON.parse(raw) : fallback
+    const data = raw ? JSON.parse(raw) : fallback
+    if (!Array.isArray(data)) return fallback
+    // Repair missing/duplicate ids so every row has a unique, stable id.
+    // (Old cached data without ids would make every row share `undefined`,
+    // causing edits in one row to apply to every row.)
+    const seen = new Set()
+    return data.map((item, i) => {
+      let id = item.id
+      if (id === undefined || id === null || seen.has(id)) {
+        id = `${key}-${i}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+      }
+      seen.add(id)
+      return { ...item, id }
+    })
   } catch {
     return fallback
   }
