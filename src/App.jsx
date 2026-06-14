@@ -505,28 +505,50 @@ function ResumesSection() {
 
 // ── JobProfilesSection ────────────────────────────────────────────────────────
 
-function ProfileRow({ item, onSave }) {
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft]     = useState(item.url)
+function ProfileRow({ item, onSave, onRemove }) {
+  const [editingUrl,  setEditingUrl]  = useState(false)
+  const [editingName, setEditingName] = useState(false)
+  const [draftUrl,  setDraftUrl]  = useState(item.url)
+  const [draftName, setDraftName] = useState(item.name)
 
-  function commit() {
-    onSave(item.name, draft)
-    setEditing(false)
-  }
+  function commitUrl()  { onSave(item.id, { url: draftUrl });   setEditingUrl(false)  }
+  function commitName() { onSave(item.id, { name: draftName }); setEditingName(false) }
 
   return (
     <tr>
-      <td className="profile-name">{item.name}</td>
-      <td className="profile-url-cell">
-        {editing ? (
+      <td className="profile-name">
+        {editingName ? (
           <input
             className="profile-input"
-            value={draft}
+            value={draftName}
+            autoFocus
+            placeholder="Platform name…"
+            onChange={e => setDraftName(e.target.value)}
+            onBlur={commitName}
+            onKeyDown={e => e.key === 'Enter' && commitName()}
+            style={{ width: '100%' }}
+          />
+        ) : (
+          <span
+            title="Click to rename"
+            style={{ cursor: 'pointer', display: 'inline-block', padding: '2px 4px', borderRadius: 4 }}
+            className="profile-name-editable"
+            onClick={() => { setDraftName(item.name); setEditingName(true) }}
+          >
+            {item.name}
+          </span>
+        )}
+      </td>
+      <td className="profile-url-cell">
+        {editingUrl ? (
+          <input
+            className="profile-input"
+            value={draftUrl}
             autoFocus
             placeholder="https://…"
-            onChange={e => setDraft(e.target.value)}
-            onBlur={commit}
-            onKeyDown={e => e.key === 'Enter' && commit()}
+            onChange={e => setDraftUrl(e.target.value)}
+            onBlur={commitUrl}
+            onKeyDown={e => e.key === 'Enter' && commitUrl()}
           />
         ) : item.url ? (
           <a href={item.url} target="_blank" rel="noreferrer" className="profile-link">{item.url}</a>
@@ -534,24 +556,36 @@ function ProfileRow({ item, onSave }) {
           <span className="placeholder">— not set —</span>
         )}
       </td>
-      <td>
-        <button className="edit-btn" onClick={() => { setDraft(item.url); setEditing(true) }}>
+      <td style={{ whiteSpace: 'nowrap' }}>
+        <button className="edit-btn" onClick={() => { setDraftUrl(item.url); setEditingUrl(true) }}>
           {item.url ? 'Edit' : 'Add'}
         </button>
+        <button
+          className="remove-btn"
+          onClick={() => onRemove(item.id)}
+          title="Remove row"
+          style={{ marginLeft: 6, fontSize: '0.75rem' }}
+        >✕</button>
       </td>
     </tr>
   )
 }
 
 function JobProfilesSection() {
-  const [platforms, setPlatforms] = useState(() => load('platforms', DEFAULT_PLATFORMS))
-  const [companies, setCompanies] = useState(() => load('companies', DEFAULT_COMPANIES))
+  const [platforms, setPlatforms] = useState(() => load('platforms', DEFAULT_PLATFORMS.map((p, i) => ({ ...p, id: i + 1 }))))
+  const [companies, setCompanies] = useState(() => load('companies', DEFAULT_COMPANIES.map((c, i) => ({ ...c, id: i + 100 }))))
 
   useEffect(() => save('platforms', platforms), [platforms])
   useEffect(() => save('companies', companies), [companies])
 
-  function saveURL(list, setList, name, url) {
-    setList(list.map(i => i.name === name ? { ...i, url } : i))
+  function updateItem(list, setList, id, changes) {
+    setList(list.map(i => i.id === id ? { ...i, ...changes } : i))
+  }
+  function removeItem(list, setList, id) {
+    setList(list.filter(i => i.id !== id))
+  }
+  function addItem(list, setList, namePlaceholder) {
+    setList([...list, { id: Date.now(), name: namePlaceholder, url: '' }])
   }
 
   return (
@@ -566,10 +600,19 @@ function JobProfilesSection() {
             <thead><tr><th>Platform</th><th>Profile URL</th><th></th></tr></thead>
             <tbody>
               {platforms.map(p => (
-                <ProfileRow key={p.name} item={p} onSave={(name, url) => saveURL(platforms, setPlatforms, name, url)} />
+                <ProfileRow
+                  key={p.id}
+                  item={p}
+                  onSave={(id, changes) => updateItem(platforms, setPlatforms, id, changes)}
+                  onRemove={(id) => removeItem(platforms, setPlatforms, id)}
+                />
               ))}
             </tbody>
           </table>
+          <button className="add-resume-btn" style={{ marginTop: '0.75rem', width: '100%' }}
+            onClick={() => addItem(platforms, setPlatforms, 'New Platform')}>
+            + Add Platform
+          </button>
         </div>
 
         <div className="profiles-table-wrap">
@@ -578,10 +621,19 @@ function JobProfilesSection() {
             <thead><tr><th>Company</th><th>Profile / Careers URL</th><th></th></tr></thead>
             <tbody>
               {companies.map(c => (
-                <ProfileRow key={c.name} item={c} onSave={(name, url) => saveURL(companies, setCompanies, name, url)} />
+                <ProfileRow
+                  key={c.id}
+                  item={c}
+                  onSave={(id, changes) => updateItem(companies, setCompanies, id, changes)}
+                  onRemove={(id) => removeItem(companies, setCompanies, id)}
+                />
               ))}
             </tbody>
           </table>
+          <button className="add-resume-btn" style={{ marginTop: '0.75rem', width: '100%' }}
+            onClick={() => addItem(companies, setCompanies, 'New Company')}>
+            + Add Company
+          </button>
         </div>
       </div>
     </section>
@@ -759,6 +811,7 @@ function App() {
         .profiles-table tr:last-child td { border-bottom: none; }
         .profiles-table tr:hover td { background: #0d0d1a; }
         .profile-name { font-weight: 600; white-space: nowrap; color: #E2E8F0; }
+        .profile-name-editable:hover { background: rgba(167,139,250,0.1); }
         .profile-url-cell { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .profile-link { color: #22D3EE; text-decoration: none; font-size: 0.78rem; }
         .profile-link:hover { text-decoration: underline; }
