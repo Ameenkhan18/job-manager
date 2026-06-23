@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import './App.css'
 
 const STATUS_CONFIG = {
@@ -110,6 +110,35 @@ function JobTracker() {
       let va = a[sortKey] || "", vb = b[sortKey] || "";
       return sortDir === "asc" ? va.localeCompare(vb) : vb.localeCompare(va);
     });
+
+  // Group rows by date so each day gets its own header in the table.
+  // Rows with no date are bucketed under "No date".
+  const groupedByDate = (() => {
+    const map = new Map();
+    filtered.forEach(app => {
+      const key = app.dateApplied || "No date";
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(app);
+    });
+    const keys = [...map.keys()];
+    keys.sort((a, b) => {
+      if (a === "No date") return 1;
+      if (b === "No date") return -1;
+      return sortDir === "asc" ? a.localeCompare(b) : b.localeCompare(a);
+    });
+    return keys.map(key => ({ date: key, rows: map.get(key) }));
+  })();
+
+  const formatDateHeader = (dateStr) => {
+    if (dateStr === "No date") return "NO DATE";
+    try {
+      const d = new Date(dateStr + "T00:00:00");
+      const weekday = d.toLocaleDateString(undefined, { weekday: "long" }).toUpperCase();
+      return `${dateStr} · ${weekday}`;
+    } catch {
+      return dateStr;
+    }
+  };
 
   const stats = Object.keys(STATUS_CONFIG).map(s => ({ label: s, count: apps.filter(a => a.status === s).length }));
   const allRoles = [...new Set(apps.map(a => a.role).filter(Boolean))];
@@ -241,47 +270,63 @@ function JobTracker() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((app, i) => {
-                  const cfg = STATUS_CONFIG[app.status] || STATUS_CONFIG.Pending;
-                  return (
-                    <tr key={app.id} className="row-hover" style={{
-                      borderBottom: i < filtered.length - 1 ? "1px solid #111122" : "none",
-                      background: "#080810",
-                    }}>
-                      <td style={{ padding: "11px 12px", fontWeight: 600, color: "#E2E8F0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={app.company}>{app.company}</td>
-                      <td style={{ padding: "11px 12px", color: "#666", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={app.role}>{app.role}</td>
-                      <td style={{ padding: "11px 12px" }}><StatusBadge status={app.status} /></td>
-                      <td style={{ padding: "11px 12px", color: "#555" }}>{app.dateApplied || "—"}</td>
-                      <td style={{ padding: "11px 12px" }}>
-                        {app.jobLink
-                          ? <a href={app.jobLink} target="_blank" rel="noreferrer" style={{ color: "#22D3EE", textDecoration: "none", fontSize: 11 }}>View ↗</a>
-                          : <span style={{ color: "#333" }}>—</span>}
-                      </td>
-                      <td style={{ padding: "11px 12px" }}>
-                        {app.resumeLink
-                          ? <a href={app.resumeLink} target="_blank" rel="noreferrer" style={{ color: "#4ADE80", textDecoration: "none", fontSize: 11 }}>Open ↗</a>
-                          : <span style={{ color: "#333" }}>—</span>}
-                      </td>
-                      <td style={{ padding: "11px 12px" }}>
-                        {app.notes
-                          ? <button onClick={() => setNotesModal(app)} style={{ fontSize: 11, color: "#FBBF24", background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.25)", borderRadius: 6, padding: "3px 8px", cursor: "pointer" }}>View</button>
-                          : <span style={{ color: "#333" }}>—</span>}
-                      </td>
-                      <td style={{ padding: "8px 12px" }}>
-                        <select value={app.status} onChange={e => handleStatusChange(app.id, e.target.value)}
-                          style={{ fontSize: 11, border: `1px solid ${cfg.border}`, borderRadius: 6, padding: "4px 6px", background: cfg.bg, color: cfg.color, cursor: "pointer", width: "100%", fontFamily: "'JetBrains Mono', monospace" }}>
-                          {Object.keys(STATUS_CONFIG).map(s => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                      </td>
-                      <td style={{ padding: "8px 12px" }}>
-                        <div style={{ display: "flex", gap: 6 }}>
-                          <button onClick={() => openEdit(app)} className="action-btn" style={{ fontSize: 11, background: "none", border: "1px solid #222", borderRadius: 6, padding: "4px 8px", cursor: "pointer", color: "#666" }}>Edit</button>
-                          <button onClick={() => setDeleteConfirm(app.id)} className="action-btn" style={{ fontSize: 11, background: "none", border: "1px solid rgba(248,113,113,0.3)", borderRadius: 6, padding: "4px 8px", cursor: "pointer", color: "#F87171" }}>Del</button>
-                        </div>
+                {groupedByDate.map(group => (
+                  <Fragment key={group.date}>
+                    <tr key={`hdr-${group.date}`}>
+                      <td colSpan={9} style={{
+                        padding: "8px 12px", background: "#0d0d1a", borderTop: "1px solid #1a1a2e",
+                        borderBottom: "1px solid #1a1a2e", color: "#A78BFA", fontSize: 10,
+                        fontWeight: 700, letterSpacing: 2, fontFamily: "'JetBrains Mono', monospace",
+                      }}>
+                        {formatDateHeader(group.date)}
+                        <span style={{ color: "#444", fontWeight: 400, marginLeft: 8 }}>
+                          {group.rows.length} application{group.rows.length === 1 ? "" : "s"}
+                        </span>
                       </td>
                     </tr>
-                  );
-                })}
+                    {group.rows.map((app, i) => {
+                      const cfg = STATUS_CONFIG[app.status] || STATUS_CONFIG.Pending;
+                      return (
+                        <tr key={app.id} className="row-hover" style={{
+                          borderBottom: i < group.rows.length - 1 ? "1px solid #111122" : "none",
+                          background: "#080810",
+                        }}>
+                          <td style={{ padding: "11px 12px", fontWeight: 600, color: "#E2E8F0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={app.company}>{app.company}</td>
+                          <td style={{ padding: "11px 12px", color: "#666", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={app.role}>{app.role}</td>
+                          <td style={{ padding: "11px 12px" }}><StatusBadge status={app.status} /></td>
+                          <td style={{ padding: "11px 12px", color: "#555" }}>{app.dateApplied || "—"}</td>
+                          <td style={{ padding: "11px 12px" }}>
+                            {app.jobLink
+                              ? <a href={app.jobLink} target="_blank" rel="noreferrer" style={{ color: "#22D3EE", textDecoration: "none", fontSize: 11 }}>View ↗</a>
+                              : <span style={{ color: "#333" }}>—</span>}
+                          </td>
+                          <td style={{ padding: "11px 12px" }}>
+                            {app.resumeLink
+                              ? <a href={app.resumeLink} target="_blank" rel="noreferrer" style={{ color: "#4ADE80", textDecoration: "none", fontSize: 11 }}>Open ↗</a>
+                              : <span style={{ color: "#333" }}>—</span>}
+                          </td>
+                          <td style={{ padding: "11px 12px" }}>
+                            {app.notes
+                              ? <button onClick={() => setNotesModal(app)} style={{ fontSize: 11, color: "#FBBF24", background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.25)", borderRadius: 6, padding: "3px 8px", cursor: "pointer" }}>View</button>
+                              : <span style={{ color: "#333" }}>—</span>}
+                          </td>
+                          <td style={{ padding: "8px 12px" }}>
+                            <select value={app.status} onChange={e => handleStatusChange(app.id, e.target.value)}
+                              style={{ fontSize: 11, border: `1px solid ${cfg.border}`, borderRadius: 6, padding: "4px 6px", background: cfg.bg, color: cfg.color, cursor: "pointer", width: "100%", fontFamily: "'JetBrains Mono', monospace" }}>
+                              {Object.keys(STATUS_CONFIG).map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                          </td>
+                          <td style={{ padding: "8px 12px" }}>
+                            <div style={{ display: "flex", gap: 6 }}>
+                              <button onClick={() => openEdit(app)} className="action-btn" style={{ fontSize: 11, background: "none", border: "1px solid #222", borderRadius: 6, padding: "4px 8px", cursor: "pointer", color: "#666" }}>Edit</button>
+                              <button onClick={() => setDeleteConfirm(app.id)} className="action-btn" style={{ fontSize: 11, background: "none", border: "1px solid rgba(248,113,113,0.3)", borderRadius: 6, padding: "4px 8px", cursor: "pointer", color: "#F87171" }}>Del</button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </Fragment>
+                ))}
               </tbody>
             </table>
           </div>
