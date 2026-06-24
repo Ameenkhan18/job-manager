@@ -698,12 +698,201 @@ function JobProfilesSection() {
   )
 }
 
+// ── Goal section ─────────────────────────────────────────────────────────────
+
+const GOAL_TABS = [
+  { key: "routine",   label: "Daily Routine",   color: "#22D3EE" },
+  { key: "skills",    label: "Skills To Know",  color: "#4ADE80" },
+  { key: "interview", label: "Interview Prep",  color: "#A78BFA" },
+];
+
+const DAILY_ROUTINE = [
+  { time: "30 MIN", color: "#22D3EE", title: "Job search", text: "LinkedIn, Naukri, Internshala, company career pages. Filter by fresher / 0-1 yrs. Save every matching JD." },
+  { time: "45 MIN", color: "#F97316", title: "Apply", text: "8-10 applications minimum per day. Tailor resume per role type — support vs analyst vs SWE." },
+  { time: "45 MIN", color: "#4ADE80", title: "Skill building", text: "Rotate daily — networking basics, OS troubleshooting, SQL practice, ticketing tools, Excel formulas." },
+  { time: "30 MIN", color: "#A78BFA", title: "Interview prep", text: "Pick 3 questions, answer out loud or on paper. Saying it out loud catches awkward phrasing early." },
+  { time: "ONGOING", color: "#FBBF24", title: "Track everything", text: "Company, role, date applied, status. Follow up after 5-7 days of silence." },
+];
+
+const SKILL_GROUPS = [
+  { title: "Operating Systems & Hardware", color: "#22D3EE", items: ["Windows OS troubleshooting", "Basic Linux commands", "Printer / peripheral setup", "Driver installation", "BIOS basics"] },
+  { title: "Networking", color: "#4ADE80", items: ["TCP/IP basics", "DNS, DHCP", "VPN troubleshooting", "ping, tracert, ipconfig", "Wi-Fi troubleshooting"] },
+  { title: "Ticketing & Support Tools", color: "#F97316", items: ["ServiceNow (concept)", "Freshdesk / Zendesk (concept)", "Remote Desktop / AnyDesk", "SLA tracking", "Incident logging"] },
+  { title: "Data Analyst Track", color: "#A78BFA", items: ["Advanced Excel (Pivot, XLOOKUP)", "SQL joins & group by", "Power BI basics", "Python (Pandas)"] },
+  { title: "Associate SWE Track", color: "#FBBF24", items: ["DSA fundamentals", "OOP concepts", "Git / GitHub", "REST API basics"] },
+  { title: "Soft Skills", color: "#F87171", items: ["Clear verbal communication", "Calm under pressure", "Active listening", "Documentation habit"] },
+];
+
+const INTERVIEW_QA = [
+  { cat: "Technical", color: "#22D3EE", items: [
+    { q: "A user says their internet isn't working. Walk me through how you'd troubleshoot it.", a: "Ask what exactly is happening first — no internet at all, or just one site. Check if Wi-Fi shows connected, run ipconfig for an IP address, ping google.com to see if it's DNS or full connection. If it's just one user, check their cable/adapter. If it's everyone, escalate to network team." },
+    { q: "How would you fix a printer that's not responding to print jobs?", a: "Check the printer is online and not showing its own error. Check the print queue — clear stuck jobs and restart the print spooler service. If it's a network printer, ping its IP. Check the driver is correct, especially after a Windows update." },
+    { q: "What's the difference between DNS and DHCP?", a: "DHCP gives your device an IP address automatically when it connects. DNS turns a website name into the IP address computers actually understand. DHCP gets you onto the network, DNS gets you to the right place once you're on it." },
+    { q: "A laptop is running very slow. What steps would you take to diagnose it?", a: "Open Task Manager and check CPU, memory, disk usage. High disk usage — check background updates or antivirus scans. High memory — check startup programs. Check free storage space. Run a malware scan if it's still slow." },
+    { q: "How do you prioritize multiple tickets that all seem urgent?", a: "Look at actual business impact — one person's email issue is lower priority than something affecting a whole team or client-facing system. Check SLA deadlines. If two are equal, communicate timing honestly instead of going silent on one." },
+  ]},
+  { cat: "Behavioral", color: "#4ADE80", items: [
+    { q: "Tell me about a time you had to explain something technical to a non-technical person.", a: "During my internship I explained an intermittent API failure using a phone-call-drops analogy instead of error logs — it clicked immediately, and we agreed on adding a retry mechanism." },
+    { q: "How do you handle a frustrated or angry user on a support call?", a: "Let them finish explaining without interrupting — most people calm down once heard. Acknowledge the frustration honestly, then move into troubleshooting. Their frustration is with the problem, not with me." },
+    { q: "Describe a time you couldn't solve a problem immediately — what did you do?", a: "An API kept timing out randomly on my medicine search app. I stopped guessing, started logging every request, and found a missing database index under load. Fixed it, response time dropped under 200ms." },
+    { q: "How do you stay organized when handling multiple issues at once?", a: "Keep a simple list sorted by urgency and deadline, update it the moment something changes instead of trying to remember everything." },
+  ]},
+  { cat: "Data Analyst", color: "#A78BFA", items: [
+    { q: "Walk me through how you'd clean a messy dataset before analysis.", a: "Check nulls and duplicates first, then data types — like making sure dates are stored as dates, not text. Look for inconsistent category spellings. Did exactly this on a ~48k record movie dataset before building anything on top." },
+    { q: "What's the difference between INNER JOIN and LEFT JOIN?", a: "INNER JOIN only returns rows with a match in both tables. LEFT JOIN keeps every row from the left table and fills blanks with NULL if there's no match on the right." },
+    { q: "How would you identify which customer segment to target for a discount offer?", a: "Look at purchase frequency and recency — customers who used to buy often but stopped recently are the best target. Check average order value to avoid discounting people who'd buy at full price anyway." },
+  ]},
+  { cat: "Associate SWE", color: "#FBBF24", items: [
+    { q: "Explain a project from your resume — what was the hardest bug you fixed?", a: "On my medicine search app, the frontend showed stale results after filtering because useEffect wasn't re-running on filter change. Fixed it by adding the filter values to the dependency array." },
+    { q: "What's the difference between SQL and NoSQL databases?", a: "SQL stores data in fixed tables with a defined schema upfront. NoSQL stores data more flexibly, usually as documents, so records don't need identical fields. Used MongoDB for varying medicine fields, SQL for structured data." },
+    { q: "How does your app handle errors if the API call fails?", a: "Frontend wraps API calls in try-catch and shows a clear error message instead of breaking silently. Backend returns a proper error status instead of crashing. Added basic logging to see failures in production." },
+  ]},
+  { cat: "Always Asked", color: "#F87171", items: [
+    { q: "Why IT support / service desk, given your background is full-stack development?", a: "I built real apps and did real debugging during my internship and projects, and realized I enjoy troubleshooting more than writing new features. Support roles let me use that root-cause thinking daily while getting hands-on industry experience early." },
+    { q: "Are you okay working in shifts, including night shifts?", a: "Yes. Support roles run round the clock since users and clients aren't only active during the day — I'd rather start with full flexibility than limit my options this early." },
+  ]},
+];
+
+function GoalSection() {
+  const [activeTab, setActiveTab] = useState("routine");
+  const [openQ, setOpenQ] = useState(null);
+
+  return (
+    <section id="goal" style={{
+      maxWidth: 1100, margin: "0 auto", padding: "2.5rem 1rem",
+      fontFamily: "'JetBrains Mono', monospace", color: "#E2E8F0", background: "#080810",
+    }}>
+      <div style={{
+        fontFamily: "'Bebas Neue', sans-serif", fontSize: "2rem", letterSpacing: 4,
+        color: "#fff", marginBottom: 4,
+      }}>GOAL</div>
+      <p style={{ fontSize: "0.75rem", color: "#444", letterSpacing: 1.5, marginBottom: "1.5rem", textTransform: "uppercase" }}>
+        IT Support / Service Desk — locked focus
+      </p>
+
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: "1.5rem" }}>
+        {GOAL_TABS.map(t => {
+          const active = activeTab === t.key;
+          return (
+            <button
+              key={t.key}
+              onClick={() => { setActiveTab(t.key); setOpenQ(null); }}
+              style={{
+                background: active ? `${t.color}22` : "#0d0d1a",
+                border: `1px solid ${active ? t.color : "#1a1a2e"}`,
+                color: active ? t.color : "#888",
+                borderRadius: 20, padding: "7px 16px", fontSize: 12, fontWeight: 600,
+                letterSpacing: 1, cursor: "pointer", fontFamily: "'JetBrains Mono', monospace",
+                boxShadow: active ? `0 0 12px ${t.color}22` : "none",
+                transition: "all 0.15s",
+              }}
+            >{t.label}</button>
+          );
+        })}
+      </div>
+
+      {activeTab === "routine" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {DAILY_ROUTINE.map((step, i) => (
+            <div key={i} style={{
+              display: "flex", gap: 14, alignItems: "flex-start",
+              background: "#0d0d1a", border: "1px solid #1a1a2e", borderRadius: 10,
+              padding: "0.9rem 1.1rem",
+            }}>
+              <span style={{
+                fontSize: 11, fontWeight: 700, color: step.color, background: `${step.color}18`,
+                border: `1px solid ${step.color}40`, borderRadius: 6, padding: "4px 10px",
+                whiteSpace: "nowrap", minWidth: 78, textAlign: "center", letterSpacing: 0.5,
+              }}>{step.time}</span>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 13, color: "#fff", marginBottom: 3 }}>{step.title}</div>
+                <div style={{ fontSize: 12.5, color: "#999", lineHeight: 1.6 }}>{step.text}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {activeTab === "skills" && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 12 }}>
+          {SKILL_GROUPS.map((g, i) => (
+            <div key={i} style={{
+              background: "#0d0d1a", border: `1px solid ${g.color}30`, borderRadius: 10,
+              padding: "0.9rem 1rem",
+            }}>
+              <div style={{
+                fontSize: 11, fontWeight: 700, color: g.color, letterSpacing: 1,
+                textTransform: "uppercase", marginBottom: 10,
+              }}>{g.title}</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {g.items.map((s, j) => (
+                  <span key={j} style={{
+                    fontSize: 11.5, color: g.color, background: `${g.color}14`,
+                    border: `1px solid ${g.color}35`, borderRadius: 20, padding: "4px 10px",
+                  }}>{s}</span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {activeTab === "interview" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          {INTERVIEW_QA.map((group, gi) => (
+            <div key={gi}>
+              <div style={{
+                fontSize: 11, fontWeight: 700, color: group.color, letterSpacing: 1.5,
+                textTransform: "uppercase", marginBottom: 8, display: "flex", alignItems: "center", gap: 8,
+              }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: group.color, display: "inline-block" }} />
+                {group.cat}
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {group.items.map((item, qi) => {
+                  const id = `${gi}-${qi}`;
+                  const open = openQ === id;
+                  return (
+                    <div key={id} style={{
+                      background: "#0d0d1a", border: `1px solid ${open ? group.color + "50" : "#1a1a2e"}`,
+                      borderRadius: 10, overflow: "hidden", transition: "border-color 0.15s",
+                    }}>
+                      <div
+                        onClick={() => setOpenQ(open ? null : id)}
+                        style={{
+                          display: "flex", justifyContent: "space-between", alignItems: "center",
+                          padding: "0.7rem 1rem", cursor: "pointer", gap: 10,
+                        }}
+                      >
+                        <span style={{ fontSize: 12.5, color: "#E2E8F0", lineHeight: 1.5 }}>{item.q}</span>
+                        <span style={{ color: group.color, fontSize: 11, flexShrink: 0 }}>{open ? "−" : "+"}</span>
+                      </div>
+                      {open && (
+                        <div style={{
+                          padding: "0 1rem 0.9rem", fontSize: 12.5, color: "#999", lineHeight: 1.7,
+                          borderTop: "1px solid #1a1a2e", paddingTop: 10,
+                        }}>{item.a}</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 // ── App ───────────────────────────────────────────────────────────────────────
 
 function App() {
   return (
     <>
       <JobTracker />
+
+      <GoalSection />
 
       <ResumesSection />
 
