@@ -168,6 +168,7 @@ function JobTracker() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@300;400;600;700&display=swap');
         * { box-sizing: border-box; }
+        html, body, #root { background: #080810; margin: 0; padding: 0; }
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: #0d0d1a; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
@@ -894,12 +895,10 @@ function App() {
 
       <GoalSection />
 
-      <ResumesSection />
-
       <JobProfilesSection />
       <style>{`
         /* ── Shared section layout ─────────────────────────────── */
-        #resumes, #job-profiles {
+        #job-profiles {
           max-width: 1100px;
           margin: 0 auto;
           padding: 2.5rem 1rem;
@@ -907,7 +906,7 @@ function App() {
           color: #E2E8F0;
           background: #080810;
         }
-        #resumes h2, #job-profiles h2 {
+        #job-profiles h2 {
           font-family: 'Bebas Neue', sans-serif;
           font-size: 2rem;
           letter-spacing: 4px;
